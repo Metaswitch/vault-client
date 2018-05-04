@@ -1,0 +1,504 @@
+---
+swagger: '2.0'
+
+info:
+  title: Vault
+  description: Hashicorp Vault API
+  version: 0.7.2
+
+basePath: /v1
+
+schemes:
+- http
+- https
+
+paths:
+  /auth/cert/login:
+    post:
+      tags:
+        - token-backend
+      summary: Log in
+      description: Log in with a TLS certificate
+      operationId: Log_in_with_TLS_certificate
+      consumes:
+      - application/json
+      parameters:
+      - name: body
+        in: body
+        description: Parameters
+        required: false
+        schema:
+          $ref: '#/definitions/AuthCertLoginParameters'
+      responses:
+        200:
+          description: Success
+          schema:
+            $ref: "#/definitions/AuthResponse"
+
+  /sys/leases/revoke:
+    put:
+      tags:
+      - leases
+      summary: Revoke lease
+      description: Revoke a lease
+      operationId: revoke_lease
+      consumes:
+      - application/json
+      parameters:
+      - name: body
+        in: body
+        description: Parameters
+        required: true
+        schema:
+          $ref: '#/definitions/RevokeLeaseParameters'
+      responses:
+        204:
+          description: Success
+    parameters:
+    - $ref: "#/parameters/X-Vault-Token"
+
+  /auth/token/create:
+    post:
+      tags:
+      - token-backend
+      summary: Create token
+      description: Create a new token without basing it off of a role.
+      operationId: create_token
+      consumes:
+      - application/json
+      produces:
+      - application/json
+      parameters:
+      - name: body
+        in: body
+        description: Parameters
+        required: true
+        schema:
+          $ref: '#/definitions/CreateTokenParameters'
+      responses:
+        200:
+          description: Success
+          schema:
+            $ref: "#/definitions/AuthResponse"
+    parameters:
+    - $ref: "#/parameters/X-Vault-Token"
+
+  /auth/token/create-orphan:
+    post:
+      tags:
+      - token-backend
+      summary: Create an orphan token
+      description: Create a new token without basing it off of a role.
+      operationId: create_orphan_token
+      consumes:
+      - application/json
+      produces:
+      - application/json
+      parameters:
+      - name: body
+        in: body
+        description: Parameters
+        required: true
+        schema:
+          $ref: '#/definitions/CreateTokenParameters'
+      responses:
+        200:
+          description: Success
+          schema:
+            $ref: "#/definitions/AuthResponse"
+    parameters:
+    - $ref: "#/parameters/X-Vault-Token"
+
+  /auth/token/renew-self:
+    post:
+      tags:
+      - token-backend
+      summary: Renew own token
+      description: Renews the token used to make this request.
+      operationId: renew_own_token
+      consumes:
+      - application/json
+      produces:
+      - application/json
+      parameters:
+      - name: body
+        in: body
+        description: Parameters
+        required: true
+        schema:
+          $ref: '#/definitions/RenewSelfParameters'
+      responses:
+        200:
+          description: Success
+          schema:
+            $ref: "#/definitions/AuthResponse"
+    parameters:
+    - $ref: "#/parameters/X-Vault-Token"
+
+  # FIXME: https://gitlab.datcon.co.uk/orchestration/vault-schema/issues/1
+  # This interface is too generic - potentially leading to tight coupling between users of the interface.
+#  /{mount}/{path}:
+#    get:
+#      tags:
+#      - generic-backend
+#      summary: Read secret
+#      description: Get secret from the Generic Secrets Backend. Swagger doesn't support multiple response types under the same return code, so we do not support querying the list of secrets.
+#      operationId: read_secret
+#      produces:
+#      - application/json
+#      responses:
+#        200:
+#          description: Success
+#          schema:
+#            $ref: "#/definitions/SecretResponse"
+#      security:
+#      - ClientToken: []
+#    put:
+#      tags:
+#      - generic-backend
+#      summary: Write secret
+#      description: Insert/update secret to the Generic Secrets Backend.
+#      operationId: write_secret
+#      consumes:
+#      - application/json
+#      parameters:
+#      - name: body
+#        in: body
+#        description: Parameters
+#        required: true
+#        schema:
+#          $ref: "#/definitions/Secret"
+#      responses:
+#        204:
+#          description: Success
+#      security:
+#      - ClientToken: []
+#    delete:
+#      tags:
+#      - generic-backend
+#      summary: Delete secret
+#      description: Insert/update secret to the Generic Secrets Backend.
+#      operationId: delete_secret
+#      responses:
+#        204:
+#          description: Success
+#      security:
+#      - ClientToken: []
+#    parameters:
+#    - name: mount
+#      in: path
+#      description: Name of the mount - commonly "secret".
+#      required: true
+#      type: string
+#    - name: path
+#      in: path
+#      description: Path of the secret. Due to limitations in the swagger specification, this cannot contain any path separators ('/'s), hence no nested secrets can be queried.
+#      required: true
+#      type: string
+
+  # FIXME: https://git.datcon.co.uk/tools.core/swagger-codegen/issues/56
+  # This method returns a raw secret - this doens't work right now in swagger-codegen
+#  /{mount}/ca/pem:
+#    get:
+#      tags:
+#      - pki-backend
+#      summary: Read CA Certificate
+#      description: Retrieve CA Certificate in PEM format (raw). The CA in use depends on the mounted PKI backend. This is an unauthenticated endpoint.
+#      operationId: read_ca_cert
+#      produces:
+#      - application/octet-stream
+#      responses:
+#        200:
+#          description: Success
+#          schema:
+#            type: string
+#      deprecated: false
+#    parameters:
+#    - name: mount
+#      in: path
+#      description: Name of the mount - commonly "pki".
+#      required: true
+#      type: string
+
+  /{mount}/cert/{serial}:
+    get:
+      tags:
+      - pki-backend
+      summary: Read certificate
+      description: Read a certificate in PEM format (within JSON). This is an unauthenticated endpoint.
+      operationId: read_cert
+      produces:
+      - application/json
+      responses:
+        200:
+          description: Success
+          schema:
+            $ref: "#/definitions/CertificateResponse"
+    parameters:
+    - name: mount
+      in: path
+      description: Name of the mount - commonly "pki".
+      required: true
+      type: string
+    - name: serial
+      in: path
+      description: Name of the certificate
+      required: true
+      type: string
+      enum:
+      - ca
+      - crl
+      - ca_chain
+
+  /{mount}/issue/{name}:
+    post:
+      tags:
+      - pki-backend
+      summary: Generate certificate
+      description: Generate a new certificate based on a role. The private key is not stored and must be retained by the client.
+      operationId: generate_cert
+      consumes:
+      - application/json
+      produces:
+      - application/json
+      parameters:
+      - name: body
+        in: body
+        description: Parameters
+        required: true
+        schema:
+          $ref: '#/definitions/GenerateCertificateParameters'
+      responses:
+        200:
+          description: Success
+          schema:
+            $ref: "#/definitions/GenerateCertificateResponse"
+    parameters:
+    - $ref: "#/parameters/X-Vault-Token"
+    - name: mount
+      in: path
+      description: Name of the mount - commonly "pki".
+      required: true
+      type: string
+    - name: name
+      in: path
+      description: Name of the role to create this certificate against
+      required: true
+      type: string
+
+parameters:
+  X-Vault-Token:
+    name: X-Vault-Token
+    description: Vault token for authorization
+    in: header
+    required: true
+    type: string
+
+definitions:
+  AuthCertLoginParameters:
+    type: object
+    properties:
+      name:
+        type: string
+    externalDocs:
+      description: Vault documentation
+      url: https://www.vaultproject.io/api/auth/cert/index.html#parameters-7
+  RevokeLeaseParameters:
+    type: object
+    properties:
+      lease_id:
+        type: string
+    required:
+    - lease_id
+  CommonResponse:
+    type: object
+    properties:
+      request_id:
+        type: string
+      lease_duration:
+        type: integer
+      lease_id:
+        type: string
+      renewable:
+        type: boolean
+    required:
+    - request_id
+    - lease_duration
+    - lease_id
+    - renewable
+  AuthResponse:
+    allOf:
+    - $ref: "#/definitions/CommonResponse"
+    - type: object
+      required:
+      - auth
+      properties:
+        auth:
+          type: object
+          properties:
+            renewable:
+              type: boolean
+            lease_duration:
+              type: integer
+            policies:
+              type: array
+              items:
+                type: string
+            accessor:
+              type: string
+            client_token:
+              type: string
+          required:
+          - renewable
+          - lease_duration
+          - policies
+          - accessor
+          - client_token
+          externalDocs:
+            description: Vault documentation
+            url: https://www.vaultproject.io/docs/auth/token.html#post
+  CreateTokenParameters:
+    type: object
+    properties:
+      id:
+        type: string
+      policies:
+        type: array
+        items:
+          type: string
+      no_parent:
+        type: boolean
+      no_default_policy:
+        type: boolean
+      renewable:
+        type: boolean
+      ttl:
+        type: string
+      explicit_max_ttl:
+        type: boolean
+      display_name:
+        type: string
+      num_uses:
+        type: integer
+      period:
+        type: string
+    externalDocs:
+      description: Vault documentation
+      url: https://www.vaultproject.io/docs/auth/token.html#post
+  RenewSelfParameters:
+    type: object
+    properties:
+      increment:
+        type: string
+    externalDocs:
+      description: Vault documentation
+      url: https://www.vaultproject.io/docs/auth/token.html#post-4
+  CertificateResponse:
+    allOf:
+    - $ref: "#/definitions/CommonResponse"
+    - type: object
+      required:
+      - data
+      properties:
+        data:
+          type: object
+          properties:
+            certificate:
+              type: string
+          required:
+          - certificate
+      externalDocs:
+        description: Vault documentation
+        url: https://www.vaultproject.io/api/secret/pki/index.html#sample-response-2
+  GenerateCertificateParameters:
+    type: object
+    properties:
+      common_name:
+        type: string
+      alt_names:
+        type: string
+      ip_sans:
+        type: string
+      ttl:
+        type: string
+      format:
+        type: string
+      exclude_cn_from_sans:
+        type: boolean
+        default: false
+    required:
+    - common_name
+    externalDocs:
+      description: Vault documentation
+      url: https://www.vaultproject.io/api/secret/pki/index.html#parameters-6
+  GenerateCertificateResponse:
+    allOf:
+    - $ref: "#/definitions/CommonResponse"
+    - type: object
+      required:
+      - data
+      properties:
+        data:
+          type: object
+          properties:
+            certificate:
+              type: string
+            issuing_ca:
+              type: string
+            ca_chain:
+              type: array
+              items:
+                type: string
+            private_key:
+              type: string
+            private_key_type:
+              type: string
+            serial_number:
+              type: string
+          required:
+          - certificate
+          - issuing_ca
+          - private_key
+          - private_key_type
+          - serial_number
+      externalDocs:
+        description: Vault documentation
+        url: https://www.vaultproject.io/api/secret/pki/index.html#sample-response-9
+
+externalDocs:
+  description: Vault documentation on API
+  url: https://www.vaultproject.io/api/index.html
+
+# FIXME: https://git.datcon.co.uk/tools.core/swagger-codegen/issues/64 - we use headers instead
+#securityDefinitions:
+#  ClientToken:
+#    type: apiKey
+#    name: X-Vault-Token
+#    description: Client token - see https://www.vaultproject.io/api/index.html#transport for more information
+#    in: header
+
+tags:
+- name: leases
+  description: Endpoints concerning Leases (System Backend)
+  externalDocs:
+    description: Vault documentation
+    url: https://www.vaultproject.io/api/system/leases.html
+
+- name: token-backend
+  description: Endpoints concerning Token Auth Backend
+  externalDocs:
+    description: Vault documentation
+    url: https://www.vaultproject.io/docs/auth/token.html
+
+- name: generic-backend
+  description: Endpoints concerning Generic Secret Backend
+  externalDocs:
+    description: Vault documentation
+    url: https://www.vaultproject.io/api/secret/generic/index.html
+
+- name: pki-backend
+  description: Endpoints concerning PKI Secret Backend
+  externalDocs:
+    description: Vault documentation
+    url: https://www.vaultproject.io/api/secret/pki/index.html
+...

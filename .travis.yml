@@ -1,0 +1,24 @@
+language: rust
+rust:
+  - stable
+  - beta
+  - nightly
+matrix:
+  include:
+  - rust: "1.25.0"
+    before_script:
+    - rustup component add rustfmt-preview --toolchain 1.25.0
+    script:
+    - rustfmt -V
+    - cargo fmt -- --write-mode diff
+  - rust: nightly-2018-02-14
+    before_script:
+    - cargo install clippy --vers 0.0.186
+    script:
+    - cargo clippy -- -D warnings
+  allow_failures:
+  - rust: nightly
+script:
+  - cargo build
+  - cargo test
+  - cargo doc

@@ -1,0 +1,4 @@
+# Swagger Codegen Ignore
+
+README.md
+api/*.yaml
