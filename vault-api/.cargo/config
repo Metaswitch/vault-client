@@ -13,6 +13,4 @@ rustflags = [
     "-W", "unused_extern_crates",  # extern crates that are never used
 
     "-W", "unused_import_braces",  # unnecessary braces around an imported item
-
-    "-D", "warnings", # all warnings should be denied
 ]

@@ -1,7 +1,9 @@
 [package]
 name = "vault-api"
 version = "0.7.2"
-authors = []
+authors = ["Metaswitch Networks Ltd"]
+license = "Apache-2.0/MIT"
+description = "Vault API library"
 
 [features]
 default = ["client", "server"]
