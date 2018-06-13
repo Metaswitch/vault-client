@@ -64,8 +64,8 @@ impl Token {
             token: token.into(),
             // Start by forcing a token renewal.
             next_renewal: Duration::new(0, 0),
-            renew_period: renew_period,
-            lifetime: lifetime,
+            renew_period,
+            lifetime,
         })
     }
 
@@ -80,7 +80,7 @@ impl Token {
     pub fn keep_updated<V: 'static + VaultApi + Send + Sync>(
         self,
         client: Arc<V>,
-        remote: Remote,
+        remote: &Remote,
         cache_path: PathBuf,
     ) -> Arc<NonEmptyPinboard<Self>> {
         // Start keeping the token alive

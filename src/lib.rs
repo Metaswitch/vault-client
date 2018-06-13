@@ -86,7 +86,7 @@ impl<V: 'static + VaultApi + Send + Sync> Client<V> {
         // Start keeping the token alive
         let token = initial_token.into().keep_updated(
             client.clone(),
-            remote.clone(),
+            &remote,
             cache_path.to_path_buf(),
         );
 
