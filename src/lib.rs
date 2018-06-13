@@ -7,7 +7,6 @@ extern crate atomicwrites;
 #[macro_use]
 extern crate error_chain;
 extern crate futures;
-extern crate futures_mutex;
 #[macro_use]
 extern crate log;
 extern crate openssl;
@@ -95,8 +94,7 @@ impl<V: 'static + VaultApi + Send + Sync> Client<V> {
         let x509_registry =
             Arc::new(
                 Registry::new(client, remote, cache_path.to_path_buf(), token)
-                    .load_cache()
-                    .wait()?,
+                    .load_cache()?
             );
 
         // Load the CA certificate chain
