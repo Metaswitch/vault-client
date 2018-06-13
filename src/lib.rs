@@ -115,9 +115,9 @@ impl<V: 'static + VaultApi + Send + Sync> Client<V> {
     ) -> Box<Future<Item = X509, Error = Error> + Send> {
         let common_name = common_name.into();
 
-        self.x509_registry
+        future::result(self.x509_registry
             // Get the certificate if previously registered.
-            .get(&common_name)
+            .get(&common_name))
             .and_then({
                 let x509_registry = self.x509_registry.clone();
                 let certificate_lifetime = self.certificate_lifetime;

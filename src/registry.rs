@@ -7,7 +7,7 @@ use std::path::PathBuf;
 use std::sync::{Arc, Mutex};
 use std::time::Duration;
 
-use futures::{future, Future};
+use futures::Future;
 use pinboard::NonEmptyPinboard;
 use tokio_core::reactor::Remote;
 use tokio_timer;
@@ -68,15 +68,10 @@ impl<V: 'static + VaultApi + Send + Sync, S: Secret + 'static> Registry<V, S> {
     }
 
     /// Attempt to get a secret previously `register`ed with the `Registry`.
-    pub fn get(&self, key: &str) -> Box<Future<Item = Option<S>, Error = Error> + Send> {
+    pub fn get(&self, key: &str) -> Result<Option<S>> {
         let key = key.to_string();
-
-        Box::new(
-            future::ok({
-                let secrets = self.secrets.lock().unwrap();
-                secrets.get(&key).map(|s| s.read())
-            }),
-        )
+        let secrets = self.secrets.lock().unwrap();
+        Ok(secrets.get(&key).map(|s| s.read()))
     }
 
     /// Register a secret with the `Registry`. The secret will then be kept up to date (as long as
