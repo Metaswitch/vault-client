@@ -1,7 +1,6 @@
 # vault-client
 
-[![Build Status](https://travis-ci.org/Metaswitch/vault-client.svg?branch=master)](https://travis-ci.org/Metaswitch/vault-client)
-[![crates.io](https://img.shields.io/crates/v/vault-client.svg)](https://crates.io/crates/vault-client)
+[![Build Status](https://travis-ci.org/Metaswitch/vault-client.svg?branch=master)](https://travis-ci.org/Metaswitch/vault-client) [![crates.io](https://img.shields.io/crates/v/vault-client.svg)](https://crates.io/crates/vault-client) [![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](https://opensource.org/licenses/MIT) [![License: Apache-2.0](https://img.shields.io/badge/License-Apache--2.0-green.svg)](http://www.apache.org/licenses/LICENSE-2.0)
 
 **vault-client** is a native client library for [HashiCorp Vault](https://www.vaultproject.io/) written in Rust. It is an alternative to [hashicorp_vault](https://crates.io/crates/hashicorp_vault), a less featured client that covers a broader range of the Vault API.
 
@@ -19,7 +18,7 @@ To add support for a new section of the Vault API, update the [swagger specifica
 
 ### Documentation
 
-**vault-client** has some developer documentation. Run `cargo doc --open` to view it.
+https://docs.rs/vault_client/
 
 ### Rustfmt
 
@@ -30,25 +29,32 @@ The CI pipeline for this crate will attempt to perform rustfmt, and will fail if
 To run a local vault server, follow the following instructions:
 
 1. [Install Vault](https://www.vaultproject.io/intro/getting-started/install.html)
+
 2. [Generate the necessary SSL certificates](https://dunne.io/vault-and-self-signed-ssl-certificates)
-    1. You can instead use the pre-generated ones in `test/certificates`. To use, run `echo 000a > certificates/serialfile`,
-    then `touch certificates/certindex`. Then run `sudo update-ca-trust enable`, copy `certificates/root.cer` to
-    `/etc/pki/ca-trust/source/anchors/ca.crt`, and then run `sudo update-ca-trust extract`.
+
+    - You can instead use the pre-generated ones in `test/certificates`. To use, run `echo 000a > certificates/serialfile`,
+      then `touch certificates/certindex`. Then run `sudo update-ca-trust enable`, copy `certificates/root.cer` to
+      `/etc/pki/ca-trust/source/anchors/ca.crt`, and then run `sudo update-ca-trust extract`.
+
 3. Run vault: `vault server -config=vault.config`, see the `vault.config` file in this directory for example
 configuration.
+
 4. Now we're going to configure the Vault further. Set up some environment variables, which allow you to use the Vault
 CLI as a client of the Vault server. This can either be run from the Vault Server VM itself, or from elsewhere:
     ```
     export VAULT_ADDR="https://127.0.0.1:8200"
     export VAULT_CACERT="certificates/root.cer"
     ```
-Note that the address used must agree with the Common Name (`CN`) of the Vault's certificate. This may mean that you
-can't talk to the Vault server over `127.0.0.1`, depending on the certificate.
+    Note that the address used must agree with the Common Name (`CN`) of the Vault's certificate. This may mean that you
+    can't talk to the Vault server over `127.0.0.1`, depending on the certificate.
+
 5. Run `vault init` and:
     ```
     export VAULT_TOKEN="<initial root token, or a new one that you created from that>"
     ```
+
 6. Then: `vault unseal` three times (one for each key)
+
 7. Mount the PKI backend. See [docs](https://www.vaultproject.io/docs/secrets/pki/) or follow the instructions below.
     ```
     vault mount pki
