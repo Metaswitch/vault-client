@@ -11,11 +11,11 @@ use futures::Future;
 use openssl;
 use vault_api;
 
-use Cache;
 use errors::*;
-use MAX_LIFETIME;
 use secret::{Secret, SecretBuilder};
+use Cache;
 use VaultApi;
+use MAX_LIFETIME;
 
 /// Name of the PKI backend used by this registry. This is hard-coded for now as only one PKI
 /// registry is supported.

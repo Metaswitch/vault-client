@@ -13,12 +13,12 @@ use tokio_core::reactor::Remote;
 use tokio_timer;
 use vault_api;
 
-use {VaultApi, MAX_LIFETIME};
-use Cache;
 use errors::*;
-use secret::{keep_secret_up_to_date, Secret, SecretBuilder};
-use secret::token::Token;
 use secret::pki::{CaChain, X509, PKI_BACKEND_NAME};
+use secret::token::Token;
+use secret::{keep_secret_up_to_date, Secret, SecretBuilder};
+use Cache;
+use {VaultApi, MAX_LIFETIME};
 
 /// The registry itself.
 ///
@@ -89,46 +89,47 @@ impl<V: 'static + VaultApi + Send + Sync, S: Secret + 'static> Registry<V, S> {
         let secret_name = secret_name.into();
         let token = self.token.read().get_token_str().clone();
 
-        Box::new(
-            secret_builder.build(client, token)
-                .map({
-                    let timer = tokio_timer::wheel()
-                        .max_timeout(Duration::from_secs(MAX_LIFETIME))
-                        .build();
+        Box::new(secret_builder.build(client, token).map({
+            let timer = tokio_timer::wheel()
+                .max_timeout(Duration::from_secs(MAX_LIFETIME))
+                .build();
 
-                    let cache_path = self.cache_path.clone();
-                    let client = self.client.clone();
-                    let remote = self.remote.clone();
-                    let secret_name = secret_name.clone();
-                    let token = self.token.clone();
-                    let secret_store = self.secrets.clone();
+            let cache_path = self.cache_path.clone();
+            let client = self.client.clone();
+            let remote = self.remote.clone();
+            let secret_name = secret_name.clone();
+            let token = self.token.clone();
+            let secret_store = self.secrets.clone();
 
-                    move |secret| {
-                        // Get the secret storage (`NonEmptyPinboard`) for this secret name,
-                        // creating it if necessary. If we created it, we should spin up a new task
-                        // to keep it up to date.
-                        let mut secret_store = secret_store.lock().unwrap();
-                        let secret = secret_store
-                            .entry(secret_name)
-                            .or_insert_with(|| {
-                                let new_secret = Arc::new(NonEmptyPinboard::new(secret.clone()));
-                                remote.spawn({
-                                    let secret = new_secret.clone();
-                                    move |handle| {
-                                        keep_secret_up_to_date(handle.remote(),
-                                                               secret,
-                                                               client,
-                                                               timer,
-                                                               &cache_path,
-                                                               token)
-                                             }});
-                                new_secret
-                            }).read();
-                        debug!("Registered {:?}", secret);
-                        secret
-                    }
-                })
-        )
+            move |secret| {
+                // Get the secret storage (`NonEmptyPinboard`) for this secret name,
+                // creating it if necessary. If we created it, we should spin up a new task
+                // to keep it up to date.
+                let mut secret_store = secret_store.lock().unwrap();
+                let secret = secret_store
+                    .entry(secret_name)
+                    .or_insert_with(|| {
+                        let new_secret = Arc::new(NonEmptyPinboard::new(secret.clone()));
+                        remote.spawn({
+                            let secret = new_secret.clone();
+                            move |handle| {
+                                keep_secret_up_to_date(
+                                    handle.remote(),
+                                    secret,
+                                    client,
+                                    timer,
+                                    &cache_path,
+                                    token,
+                                )
+                            }
+                        });
+                        new_secret
+                    })
+                    .read();
+                debug!("Registered {:?}", secret);
+                secret
+            }
+        }))
     }
 }
 

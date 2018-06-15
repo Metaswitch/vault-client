@@ -9,8 +9,8 @@ use vault_client::*;
 
 use std::env;
 use std::path::Path;
-use std::time::Duration;
 use std::sync::Arc;
+use std::time::Duration;
 
 use futures::Future;
 use tokio_core::reactor::Core;

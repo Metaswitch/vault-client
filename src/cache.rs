@@ -63,9 +63,9 @@ mod tests {
 
     use self::tempfile::NamedTempFile;
 
-    use Cache;
-    use secret::Secret;
     use secret::pki::X509;
+    use secret::Secret;
+    use Cache;
 
     fn new_certificate<S: Into<String>>(common_name: S) -> X509 {
         X509 {

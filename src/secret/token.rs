@@ -13,9 +13,9 @@ use tokio_timer;
 use vault_api;
 
 use errors::*;
-use MAX_LIFETIME;
 use secret::{keep_secret_up_to_date, Secret};
 use VaultApi;
+use MAX_LIFETIME;
 
 /// [Tokens](https://www.vaultproject.io/docs/concepts/tokens.html) are used by Vault clients to
 /// authenticate themselves against a Vault server. This supports only renewable tokens (i.e.

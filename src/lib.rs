@@ -32,8 +32,8 @@ use vault_api::Api as VaultApi;
 use cache::Cache;
 pub use errors::*;
 use registry::Registry;
-pub use secret::token::Token;
 pub use secret::pki::{CaChain, X509, X509Builder};
+pub use secret::token::Token;
 
 mod cache;
 mod errors;
@@ -84,18 +84,14 @@ impl<V: 'static + VaultApi + Send + Sync> Client<V> {
         certificate_lifetime: Duration,
     ) -> Result<Self> {
         // Start keeping the token alive
-        let token = initial_token.into().keep_updated(
-            client.clone(),
-            &remote,
-            cache_path.to_path_buf(),
-        );
+        let token =
+            initial_token
+                .into()
+                .keep_updated(client.clone(), &remote, cache_path.to_path_buf());
 
         // Registry for X509 certificates
         let x509_registry =
-            Arc::new(
-                Registry::new(client, remote, cache_path.to_path_buf(), token)
-                    .load_cache()?
-            );
+            Arc::new(Registry::new(client, remote, cache_path.to_path_buf(), token).load_cache()?);
 
         // Load the CA certificate chain
         let ca_certificate_chain_cache = load_ca_certificate_chain(cache_path)?;
@@ -119,24 +115,28 @@ impl<V: 'static + VaultApi + Send + Sync> Client<V> {
             // Get the certificate if previously registered.
             .get(&common_name))
             .and_then({
-                let x509_registry = self.x509_registry.clone();
-                let certificate_lifetime = self.certificate_lifetime;
-                let certificate_replacement = self.certificate_replacement;
+            let x509_registry = self.x509_registry.clone();
+            let certificate_lifetime = self.certificate_lifetime;
+            let certificate_replacement = self.certificate_replacement;
 
-                move |secret| {
-                    secret
-                        .map(|s| -> Box<Future<Item=X509, Error=Error> + Send> {
-                            Box::new(future::result(Ok(s)))
-                        })
-                        .unwrap_or_else(|| {
-                            // The certificate hasn't yet been registered, so do so now.
-                            x509_registry.register(common_name.to_string(),
-                                                   X509Builder::new(common_name,
-                                                                    certificate_replacement,
-                                                                    certificate_lifetime))
+            move |secret| {
+                secret
+                    .map(|s| -> Box<Future<Item = X509, Error = Error> + Send> {
+                        Box::new(future::result(Ok(s)))
                     })
-                }
-            })
+                    .unwrap_or_else(|| {
+                        // The certificate hasn't yet been registered, so do so now.
+                        x509_registry.register(
+                            common_name.to_string(),
+                            X509Builder::new(
+                                common_name,
+                                certificate_replacement,
+                                certificate_lifetime,
+                            ),
+                        )
+                    })
+            }
+        })
             .log(|m| debug!("Got X.509 certificate: {:?}", m))
     }
 
