@@ -1,15 +1,13 @@
 [package]
-authors = ["Metaswitch Networks Ltd"]
-categories = ["authentication"]
-description = "A client library for HashiCorp Vault"
-keywords = [
-    "vault",
-    "tls",
-]
-license = "Apache-2.0/MIT"
 name = "vault_client"
-readme = "README.md"
 version = "0.3.0"
+authors = ["Metaswitch Networks Ltd"]
+
+description = "A client library for HashiCorp Vault"
+readme = "README.md"
+keywords = ["vault", "tls"]
+categories = ["authentication"]
+license = "Apache-2.0/MIT"
 
 [dependencies]
 atomicwrites = "0.2.1"

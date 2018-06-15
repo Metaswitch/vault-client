@@ -108,7 +108,7 @@ impl<V: 'static + VaultApi + Send + Sync, S: Secret + 'static> Registry<V, S> {
                         // creating it if necessary. If we created it, we should spin up a new task
                         // to keep it up to date.
                         let mut secret_store = secret_store.lock().unwrap();
-                        secret_store
+                        let secret = secret_store
                             .entry(secret_name)
                             .or_insert_with(|| {
                                 let new_secret = Arc::new(NonEmptyPinboard::new(secret.clone()));
@@ -123,7 +123,9 @@ impl<V: 'static + VaultApi + Send + Sync, S: Secret + 'static> Registry<V, S> {
                                                                token)
                                              }});
                                 new_secret
-                            }).clone().read()
+                            }).read();
+                        debug!("Registered {:?}", secret);
+                        secret
                     }
                 })
         )
