@@ -11,11 +11,11 @@ use futures::Future;
 use openssl;
 use vault_api;
 
-use Cache;
 use errors::*;
-use MAX_LIFETIME;
 use secret::{Secret, SecretBuilder};
+use Cache;
 use VaultApi;
+use MAX_LIFETIME;
 
 /// Name of the PKI backend used by this registry. This is hard-coded for now as only one PKI
 /// registry is supported.
@@ -106,15 +106,15 @@ impl X509 {
         lifetime: Duration,
     ) -> Self {
         X509 {
-            common_name: common_name,
+            common_name,
             certificate: resp.certificate,
             issuing_ca: resp.issuing_ca,
             ca_chain: resp.ca_chain,
             private_key: resp.private_key,
             private_key_type: resp.private_key_type,
             serial_number: resp.serial_number,
-            replace_after: replace_after,
-            lifetime: lifetime,
+            replace_after,
+            lifetime,
         }
     }
 
@@ -228,16 +228,16 @@ impl CaChain {
         let root_x509 = stack.pop().ok_or_else(|| "CA chain was empty")?;
 
         /// Helper function to convert X509 to PEM
-        fn x509_to_pem(x509: openssl::x509::X509) -> Result<String> {
+        fn x509_to_pem(x509: &openssl::x509::X509) -> Result<String> {
             let pem_bytes = x509.to_pem()
                 .chain_err(|| "Failed to convert CA chain into bytes")?;
             String::from_utf8(pem_bytes).chain_err(|| "CA chain was not valid UTF8")
         }
 
         // Next, convert each X509 back to PEM strings.
-        let root_pem = x509_to_pem(root_x509)?;
+        let root_pem = x509_to_pem(&root_x509)?;
         let rest_pem = stack
-            .into_iter()
+            .iter()
             .map(x509_to_pem)
             .collect::<Result<Vec<String>>>()?;
 

@@ -4,22 +4,21 @@
 
 use std::collections::HashMap;
 use std::path::PathBuf;
-use std::sync::Arc;
+use std::sync::{Arc, Mutex};
 use std::time::Duration;
 
-use futures::{future, Future};
-use futures_mutex::FutMutex;
+use futures::Future;
 use pinboard::NonEmptyPinboard;
 use tokio_core::reactor::Remote;
 use tokio_timer;
 use vault_api;
 
-use {VaultApi, MAX_LIFETIME};
-use Cache;
 use errors::*;
-use secret::{keep_secret_up_to_date, Secret, SecretBuilder};
-use secret::token::Token;
 use secret::pki::{CaChain, X509, PKI_BACKEND_NAME};
+use secret::token::Token;
+use secret::{keep_secret_up_to_date, Secret, SecretBuilder};
+use Cache;
+use {VaultApi, MAX_LIFETIME};
 
 /// The registry itself.
 ///
@@ -45,7 +44,7 @@ pub(crate) struct Registry<V: VaultApi, S: Secret + 'static> {
     token: Arc<NonEmptyPinboard<Token>>,
 
     /// The secrets store by this registry. These are kept alive by this registry.
-    secrets: FutMutex<HashMap<String, Arc<NonEmptyPinboard<S>>>>,
+    secrets: Arc<Mutex<HashMap<String, Arc<NonEmptyPinboard<S>>>>>,
 
     /// The location of the cache where all values are stored on disk.
     cache_path: PathBuf,
@@ -63,25 +62,16 @@ impl<V: 'static + VaultApi + Send + Sync, S: Secret + 'static> Registry<V, S> {
             client,
             remote,
             token: initial_token,
-            secrets: FutMutex::new(HashMap::new()),
+            secrets: Arc::default(),
             cache_path,
         }
     }
 
     /// Attempt to get a secret previously `register`ed with the `Registry`.
-    pub fn get(&self, key: &str) -> Box<Future<Item = Option<S>, Error = Error> + Send> {
+    pub fn get(&self, key: &str) -> Result<Option<S>> {
         let key = key.to_string();
-
-        Box::new(
-            self.secrets.clone()
-            // Obtain the lock for the registry
-            .lock()
-            .map_err(|_| panic!("Poisoned lock"))
-            .and_then(move |secrets| {
-                // Look up the secret
-                future::ok(secrets.get(&key).map(|s| s.read()))
-            }),
-        )
+        let secrets = self.secrets.lock().unwrap();
+        Ok(secrets.get(&key).map(|s| s.read()))
     }
 
     /// Register a secret with the `Registry`. The secret will then be kept up to date (as long as
@@ -97,47 +87,49 @@ impl<V: 'static + VaultApi + Send + Sync, S: Secret + 'static> Registry<V, S> {
     {
         let client = self.client.clone();
         let secret_name = secret_name.into();
-        let secret_store = self.secrets.clone();
         let token = self.token.read().get_token_str().clone();
 
-        secret_builder.build(client, token)
-                // Unlock the registry
-                .join(secret_store.lock().map_err(|_| panic!("Poisoned lock")))
-                .map({
-                    let timer = tokio_timer::wheel()
-                        .max_timeout(Duration::from_secs(MAX_LIFETIME))
-                        .build();
+        Box::new(secret_builder.build(client, token).map({
+            let timer = tokio_timer::wheel()
+                .max_timeout(Duration::from_secs(MAX_LIFETIME))
+                .build();
 
-                    let cache_path = self.cache_path.clone();
-                    let client = self.client.clone();
-                    let remote = self.remote.clone();
-                    let secret_name = secret_name.clone();
-                    let token = self.token.clone();
+            let cache_path = self.cache_path.clone();
+            let client = self.client.clone();
+            let remote = self.remote.clone();
+            let secret_name = secret_name.clone();
+            let token = self.token.clone();
+            let secret_store = self.secrets.clone();
 
-                    move |(secret, mut secret_store)| {
-                        // Get the secret storage (`NonEmptyPinboard`) for this secret name,
-                        // creating it if necessary. If we created it, we should spin up a new task
-                        // to keep it up to date.
-                        secret_store
-                            .entry(secret_name)
-                            .or_insert_with(|| {
-                                let new_secret = Arc::new(NonEmptyPinboard::new(secret.clone()));
-                                remote.spawn({
-                                    let secret = new_secret.clone();
-                                    move |handle| {
-                                        keep_secret_up_to_date(handle.remote(),
-                                                               secret,
-                                                               client,
-                                                               timer,
-                                                               &cache_path,
-                                                               token)
-                                             }});
-                                new_secret
-                            }).clone().read()
-                    }
-                })
-
-                .log(|m| debug!("Registered {:?}", m))
+            move |secret| {
+                // Get the secret storage (`NonEmptyPinboard`) for this secret name,
+                // creating it if necessary. If we created it, we should spin up a new task
+                // to keep it up to date.
+                let mut secret_store = secret_store.lock().unwrap();
+                let secret = secret_store
+                    .entry(secret_name)
+                    .or_insert_with(|| {
+                        let new_secret = Arc::new(NonEmptyPinboard::new(secret.clone()));
+                        remote.spawn({
+                            let secret = new_secret.clone();
+                            move |handle| {
+                                keep_secret_up_to_date(
+                                    handle.remote(),
+                                    secret,
+                                    client,
+                                    timer,
+                                    &cache_path,
+                                    token,
+                                )
+                            }
+                        });
+                        new_secret
+                    })
+                    .read();
+                debug!("Registered {:?}", secret);
+                secret
+            }
+        }))
     }
 }
 
@@ -145,53 +137,49 @@ impl<V: 'static + VaultApi + Send + Sync> Registry<V, X509> {
     /// Load X.509 certificates from the cache, and ensure that they are added to the registry.
     /// Certificates already in the registry will **not** be overridden by certificates with the
     /// same common name in the cache (which are ignored).
-    pub fn load_cache(self) -> Box<Future<Item = Self, Error = Error> + Send> {
+    pub fn load_cache(self) -> Result<Self> {
         let cache_path = self.cache_path.clone();
         let client = self.client.clone();
         let remote = self.remote.clone();
         let token = self.token.clone();
 
-        Box::new(
-            self.secrets
-                .to_owned()
-                .lock()
-                .map_err(|_| panic!("Poisoned lock"))
-                .and_then(move |mut secret_store| {
-                    let cache = Cache::load(&cache_path)?;
-                    let timer = tokio_timer::wheel()
-                        .max_timeout(Duration::from_secs(MAX_LIFETIME))
-                        .build();
+        {
+            let mut secret_store = self.secrets.lock().unwrap();
+            let cache = Cache::load(&cache_path)?;
+            let timer = tokio_timer::wheel()
+                .max_timeout(Duration::from_secs(MAX_LIFETIME))
+                .build();
 
-                    for (certificate_name, certificate) in cache.certificates {
-                        let cache_path = cache_path.clone();
-                        let client = client.clone();
-                        let remote = remote.clone();
-                        let timer = timer.clone();
-                        let token = token.clone();
+            for (certificate_name, certificate) in cache.certificates {
+                let cache_path = cache_path.clone();
+                let client = client.clone();
+                let remote = remote.clone();
+                let timer = timer.clone();
+                let token = token.clone();
 
-                        secret_store
-                            .entry(certificate_name)
-                            .or_insert_with(move || {
-                                let secret_to_insert = Arc::new(NonEmptyPinboard::new(certificate));
-                                remote.spawn({
-                                    let secret_to_update = secret_to_insert.clone();
-                                    move |handle| {
-                                        keep_secret_up_to_date(
-                                            handle.remote(),
-                                            secret_to_update,
-                                            client,
-                                            timer,
-                                            &cache_path,
-                                            token,
-                                        )
-                                    }
-                                });
-                                secret_to_insert
-                            });
-                    }
-                    Ok(self)
-                }),
-        )
+                secret_store
+                    .entry(certificate_name)
+                    .or_insert_with(move || {
+                        let secret_to_insert = Arc::new(NonEmptyPinboard::new(certificate));
+                        remote.spawn({
+                            let secret_to_update = secret_to_insert.clone();
+                            move |handle| {
+                                keep_secret_up_to_date(
+                                    handle.remote(),
+                                    secret_to_update,
+                                    client,
+                                    timer,
+                                    &cache_path,
+                                    token,
+                                )
+                            }
+                        });
+                        secret_to_insert
+                    });
+            }
+        }
+
+        Ok(self)
     }
 
     /// Get the current CA certificate chain

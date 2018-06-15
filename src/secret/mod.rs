@@ -2,8 +2,8 @@
 //! client library.
 use std::fmt::Debug;
 use std::path::PathBuf;
-use std::time::Duration;
 use std::sync::Arc;
+use std::time::Duration;
 
 use futures::Future;
 use pinboard::NonEmptyPinboard;
@@ -11,9 +11,9 @@ use tokio_core::reactor::Remote;
 use tokio_timer::Timer;
 use vault_api::Api as VaultApi;
 
+use self::token::Token;
 use cache::Cache;
 use errors::*;
-use self::token::Token;
 
 pub mod pki;
 pub mod token;
