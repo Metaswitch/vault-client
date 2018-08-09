@@ -24,3 +24,7 @@ script:
   - cargo build
   - cargo test
   - cargo doc
+branches:
+  except:
+    - staging.tmp
+    - trying.tmp
