@@ -5,6 +5,7 @@ authors = ["Metaswitch Networks Ltd"]
 
 description = "A client library for HashiCorp Vault"
 readme = "README.md"
+repository = "https://github.com/Metaswitch/vault-client"
 keywords = ["vault", "tls"]
 categories = ["authentication"]
 license = "Apache-2.0/MIT"
