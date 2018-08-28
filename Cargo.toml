@@ -1,6 +1,6 @@
 [package]
 name = "vault_client"
-version = "0.3.1"
+version = "0.3.2"
 authors = ["Metaswitch Networks Ltd"]
 
 description = "A client library for HashiCorp Vault"
