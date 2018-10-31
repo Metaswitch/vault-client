@@ -12,6 +12,10 @@ extern crate lazy_static;
 #[macro_use]
 extern crate log;
 
+extern crate http;
+#[macro_use]
+extern crate mime;
+
 // Logically this should be in the client and server modules, but rust doesn't allow `macro_use` from a module.
 #[cfg(any(feature = "client", feature = "server"))]
 #[macro_use]

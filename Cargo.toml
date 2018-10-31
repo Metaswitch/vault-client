@@ -31,3 +31,7 @@ vault-api = "0.7.2"
 tempfile = "2.1.5"
 
 [workspace]
+
+members = [
+    "vault-api",
+]

@@ -11,8 +11,8 @@ extern crate chrono;
 use futures::Future;
 use futures::future;
 use futures::{stream, Stream};
-use hyper;
-use hyper::header::{Headers, ContentType};
+use self::iron::headers;
+use self::iron::headers::{Headers, ContentType};
 use self::iron::prelude::*;
 use self::iron::{status, modifiers, BeforeMiddleware};
 use self::iron::url::percent_encoding::percent_decode;
@@ -48,8 +48,6 @@ use {Api,
      };
 #[allow(unused_imports)]
 use models;
-
-header! { (Warning, "Warning") => [String] }
 
 /// Create a new router for `Api`
 pub fn router<T>(api: T) -> Router where T: Api + Send + Sync + Clone + 'static {
@@ -102,7 +100,6 @@ fn add_routes<T>(router: &mut Router, api: T) where T: Api + Send + Sync + Clone
 
 
                 // Header parameters
-                header! { (RequestXVaultToken, "X-Vault-Token") => [String] }
                 let param_x_vault_token = req.headers.get::<RequestXVaultToken>().ok_or_else(|| Response::with((status::BadRequest, "Missing or invalid required header X-Vault-Token".to_string())))?.0.clone();
 
 
@@ -133,7 +130,7 @@ fn add_routes<T>(router: &mut Router, api: T) where T: Api + Send + Sync + Clone
                         SysLeasesRevokePutResponse::Success => {
 
 
-                            let mut response = Response::with((status::Status::from_u16(204)));    
+                            let mut response = Response::with(status::Status::from_u16(204));
                             context.x_span_id.as_ref().map(|header| response.headers.set(XSpanId(header.clone())));
                             if !unused_elements.is_empty() {
                                 response.headers.set(Warning(format!("Ignoring unknown fields in body: {:?}", unused_elements)));
@@ -188,7 +185,6 @@ fn add_routes<T>(router: &mut Router, api: T) where T: Api + Send + Sync + Clone
                 };
 
                 // Header parameters
-                header! { (RequestXVaultToken, "X-Vault-Token") => [String] }
                 let param_x_vault_token = req.headers.get::<RequestXVaultToken>().ok_or_else(|| Response::with((status::BadRequest, "Missing or invalid required header X-Vault-Token".to_string())))?.0.clone();
 
 
@@ -220,7 +216,7 @@ fn add_routes<T>(router: &mut Router, api: T) where T: Api + Send + Sync + Clone
 
                             let body_string = serde_json::to_string(&body).expect("impossible to fail to serialize");
 
-                            let mut response = Response::with((status::Status::from_u16(200), body_string));    
+                            let mut response = Response::with((status::Status::from_u16(200), body_string));
                             response.headers.set(ContentType(mimetypes::responses::GENERATE_CERT_SUCCESS.clone()));
 
                             context.x_span_id.as_ref().map(|header| response.headers.set(XSpanId(header.clone())));
@@ -284,7 +280,7 @@ fn add_routes<T>(router: &mut Router, api: T) where T: Api + Send + Sync + Clone
 
                             let body_string = serde_json::to_string(&body).expect("impossible to fail to serialize");
 
-                            let mut response = Response::with((status::Status::from_u16(200), body_string));    
+                            let mut response = Response::with((status::Status::from_u16(200), body_string));
                             response.headers.set(ContentType(mimetypes::responses::READ_CERT_SUCCESS.clone()));
 
                             context.x_span_id.as_ref().map(|header| response.headers.set(XSpanId(header.clone())));
@@ -323,7 +319,6 @@ fn add_routes<T>(router: &mut Router, api: T) where T: Api + Send + Sync + Clone
 
 
                 // Header parameters
-                header! { (RequestXVaultToken, "X-Vault-Token") => [String] }
                 let param_x_vault_token = req.headers.get::<RequestXVaultToken>().ok_or_else(|| Response::with((status::BadRequest, "Missing or invalid required header X-Vault-Token".to_string())))?.0.clone();
 
 
@@ -334,7 +329,7 @@ fn add_routes<T>(router: &mut Router, api: T) where T: Api + Send + Sync + Clone
                 let param_body_raw = req.get::<bodyparser::Raw>().map_err(|e| Response::with((status::BadRequest, format!("Couldn't parse body parameter body - not valid UTF-8: {}", e))))?;
                 let mut unused_elements = Vec::new();
 
-                let param_body = if let Some(param_body_raw) = param_body_raw { 
+                let param_body = if let Some(param_body_raw) = param_body_raw {
                     let deserializer = &mut serde_json::Deserializer::from_str(&param_body_raw);
 
                     let param_body: Option<models::CreateTokenParameters> = serde_ignored::deserialize(deserializer, |path| {
@@ -355,12 +350,13 @@ fn add_routes<T>(router: &mut Router, api: T) where T: Api + Send + Sync + Clone
 
                             let body_string = serde_json::to_string(&body).expect("impossible to fail to serialize");
 
-                            let mut response = Response::with((status::Status::from_u16(200), body_string));    
+                            let mut response = Response::with((status::Status::from_u16(200), body_string));
                             response.headers.set(ContentType(mimetypes::responses::CREATE_ORPHAN_TOKEN_SUCCESS.clone()));
 
                             context.x_span_id.as_ref().map(|header| response.headers.set(XSpanId(header.clone())));
                             if !unused_elements.is_empty() {
-                                response.headers.set(Warning(format!("Ignoring unknown fields in body: {:?}", unused_elements)));
+                                let warn = format!("Ignoring unknown fields in body: {:?}", unused_elements);
+                                response.headers.set(Warning(warn));
                             }
                             Ok(response)
                         },
@@ -396,7 +392,6 @@ fn add_routes<T>(router: &mut Router, api: T) where T: Api + Send + Sync + Clone
 
 
                 // Header parameters
-                header! { (RequestXVaultToken, "X-Vault-Token") => [String] }
                 let param_x_vault_token = req.headers.get::<RequestXVaultToken>().ok_or_else(|| Response::with((status::BadRequest, "Missing or invalid required header X-Vault-Token".to_string())))?.0.clone();
 
 
@@ -428,12 +423,13 @@ fn add_routes<T>(router: &mut Router, api: T) where T: Api + Send + Sync + Clone
 
                             let body_string = serde_json::to_string(&body).expect("impossible to fail to serialize");
 
-                            let mut response = Response::with((status::Status::from_u16(200), body_string));    
+                            let mut response = Response::with((status::Status::from_u16(200), body_string));
                             response.headers.set(ContentType(mimetypes::responses::CREATE_TOKEN_SUCCESS.clone()));
 
                             context.x_span_id.as_ref().map(|header| response.headers.set(XSpanId(header.clone())));
                             if !unused_elements.is_empty() {
-                                response.headers.set(Warning(format!("Ignoring unknown fields in body: {:?}", unused_elements)));
+                                let warn = format!("Ignoring unknown fields in body: {:?}", unused_elements);
+                                response.headers.set(Warning(warn));
                             }
                             Ok(response)
                         },
@@ -476,7 +472,7 @@ fn add_routes<T>(router: &mut Router, api: T) where T: Api + Send + Sync + Clone
                 let param_body_raw = req.get::<bodyparser::Raw>().unwrap_or(None);
                 let mut unused_elements = Vec::new();
 
-                let param_body = if let Some(param_body_raw) = param_body_raw { 
+                let param_body = if let Some(param_body_raw) = param_body_raw {
                     let deserializer = &mut serde_json::Deserializer::from_str(&param_body_raw);
 
                     let param_body: Option<models::AuthCertLoginParameters> = serde_ignored::deserialize(deserializer, |path| {
@@ -496,7 +492,7 @@ fn add_routes<T>(router: &mut Router, api: T) where T: Api + Send + Sync + Clone
 
                             let body_string = serde_json::to_string(&body).expect("impossible to fail to serialize");
 
-                            let mut response = Response::with((status::Status::from_u16(200), body_string));    
+                            let mut response = Response::with((status::Status::from_u16(200), body_string));
                             context.x_span_id.as_ref().map(|header| response.headers.set(XSpanId(header.clone())));
                             if !unused_elements.is_empty() {
                                 response.headers.set(Warning(format!("Ignoring unknown fields in body: {:?}", unused_elements)));
@@ -535,7 +531,6 @@ fn add_routes<T>(router: &mut Router, api: T) where T: Api + Send + Sync + Clone
 
 
                 // Header parameters
-                header! { (RequestXVaultToken, "X-Vault-Token") => [String] }
                 let param_x_vault_token = req.headers.get::<RequestXVaultToken>().ok_or_else(|| Response::with((status::BadRequest, "Missing or invalid required header X-Vault-Token".to_string())))?.0.clone();
 
 
@@ -546,7 +541,7 @@ fn add_routes<T>(router: &mut Router, api: T) where T: Api + Send + Sync + Clone
                 let param_body_raw = req.get::<bodyparser::Raw>().map_err(|e| Response::with((status::BadRequest, format!("Couldn't parse body parameter body - not valid UTF-8: {}", e))))?;
                 let mut unused_elements = Vec::new();
 
-                let param_body = if let Some(param_body_raw) = param_body_raw { 
+                let param_body = if let Some(param_body_raw) = param_body_raw {
                     let deserializer = &mut serde_json::Deserializer::from_str(&param_body_raw);
 
                     let param_body: Option<models::RenewSelfParameters> = serde_ignored::deserialize(deserializer, |path| {
@@ -567,7 +562,7 @@ fn add_routes<T>(router: &mut Router, api: T) where T: Api + Send + Sync + Clone
 
                             let body_string = serde_json::to_string(&body).expect("impossible to fail to serialize");
 
-                            let mut response = Response::with((status::Status::from_u16(200), body_string));    
+                            let mut response = Response::with((status::Status::from_u16(200), body_string));
                             response.headers.set(ContentType(mimetypes::responses::RENEW_OWN_TOKEN_SUCCESS.clone()));
 
                             context.x_span_id.as_ref().map(|header| response.headers.set(XSpanId(header.clone())));
@@ -601,5 +596,42 @@ impl BeforeMiddleware for ExtractAuthData {
     fn before(&self, req: &mut Request) -> IronResult<()> {
 
         Ok(())
+    }
+}
+
+#[derive(Clone, Debug)]
+pub struct RequestXVaultToken(pub String);
+
+impl iron::headers::Header for RequestXVaultToken {
+    fn header_name() -> &'static str {
+        "X-Vault-Token"
+    }
+    fn parse_header(raw: &[Vec<u8>]) -> Result<Self, iron::error::HttpError> {
+        iron::headers::parsing::from_one_raw_str(raw).map(RequestXVaultToken)
+    }
+}
+
+impl iron::headers::HeaderFormat for RequestXVaultToken {
+    fn fmt_header(&self, f: &mut ::std::fmt::Formatter) -> ::std::fmt::Result {
+        ::std::fmt::Display::fmt(&*self.0, f)
+    }
+}
+
+
+#[derive(Clone, Debug)]
+pub struct Warning(pub String);
+
+impl iron::headers::Header for Warning {
+    fn header_name() -> &'static str {
+        "Warning"
+    }
+    fn parse_header(raw: &[Vec<u8>]) -> Result<Self, iron::error::HttpError> {
+        iron::headers::parsing::from_one_raw_str(raw).map(Warning)
+    }
+}
+
+impl iron::headers::HeaderFormat for Warning {
+    fn fmt_header(&self, f: &mut ::std::fmt::Formatter) -> ::std::fmt::Result {
+        ::std::fmt::Display::fmt(&*self.0, f)
     }
 }
