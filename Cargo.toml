@@ -28,6 +28,6 @@ url = "1.4.0"
 vault-api = "0.7.2"
 
 [dev-dependencies]
-tempfile = "2.1.5"
+tempfile = "3.0.5"
 
 [workspace]
