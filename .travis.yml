@@ -25,6 +25,7 @@ script:
   - cargo test
   - cargo doc
 branches:
-  except:
-    - staging.tmp
-    - trying.tmp
+  only:
+    - staging
+    - trying
+    - master
