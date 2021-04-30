@@ -8,6 +8,7 @@ extern crate swagger;
 #[allow(unused_extern_crates)]
 extern crate uuid;
 extern crate clap;
+extern crate url;
 
 #[allow(unused_imports)]
 use futures::{Future, future, Stream, stream};
@@ -23,6 +24,7 @@ use vault_api::{ApiNoContext, ContextWrapperExt,
                       RenewOwnTokenResponse
                      };
 use clap::{App, Arg};
+use url::Url;
 
 fn main() {
     let matches = App::new("client")
@@ -54,6 +56,8 @@ fn main() {
                            if is_https { "https" } else { "http" },
                            matches.value_of("host").unwrap(),
                            matches.value_of("port").unwrap());
+    let base_url = Url::parse(&base_url).expect("Invalid base url");
+
     let client = if is_https {
         // Using Simple HTTPS
         vault_api::Client::try_new_https(&base_url, "examples/ca.pem")
