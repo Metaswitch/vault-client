@@ -39,5 +39,5 @@ uuid = {version = "0.5", optional = true, features = ["serde", "v4"]}
 
 
 [dev-dependencies]
-clap = "2.25"
+clap = "3.1"
 error-chain = "0.11"
