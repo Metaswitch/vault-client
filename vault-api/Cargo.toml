@@ -14,7 +14,7 @@ server = ["serde_json", "serde_ignored", "hyper", "iron", "router", "bodyparser"
 # Required by example server.
 #
 chrono = { version = "0.4", features = ["serde"] }
-futures = "0.1"
+futures = "0.3"
 hyper = {version = "0.10", optional = true}
 hyper-openssl = {version = "0.2", optional = true }
 iron = {version = "0.5", optional = true}
